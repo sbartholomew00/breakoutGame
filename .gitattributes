@@ -66,3 +66,4 @@
 # Generated files
 ###############################################################################
 glad.c linguist-generated
+glad.h linguist-generated
