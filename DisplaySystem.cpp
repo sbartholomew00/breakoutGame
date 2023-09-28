@@ -363,29 +363,9 @@ namespace DisplaySystem {
             glAttachShader(shaderProgram, geomentryShaderID);
             glAttachShader(shaderProgram, fragmentShaderID);
             glLinkProgram(shaderProgram);
-
-            // Check linked
-            /* {
-                GLint success;
-                char infoLog[512];
-                glGetProgramiv(shader::shaderProgram, GL_LINK_STATUS, &success);
-                //glGetShaderiv(geomentryShaderID, GL_COMPILE_STATUS, &success);
-                assert(success != 0);
-                if (!success)
-                {
-                    glGetShaderInfoLog(geomentryShaderID, 512, NULL, infoLog);
-                    std::cout << "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n" << infoLog << std::endl;
-                }
-            }*/
         }
 
         stbi_set_flip_vertically_on_load(true); // Need to do this before loading any images
-
-        // Debug
-        /*GLenum err;
-        while ((err = glGetError()) != GL_NO_ERROR) {
-            printf("%i\n", err);
-        }*/
     }
 
     void cleanup() {

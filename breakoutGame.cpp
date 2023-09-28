@@ -6,6 +6,7 @@
 
 const LPCWSTR propName = L"BreakoutGame";
 
+// Represents the top left corner of a rectangle, and its width and height
 struct Rect {
     float x;
     float y;
@@ -13,6 +14,12 @@ struct Rect {
     float h;
 };
 
+// Creates a Rect using screen coordinates based on a location within a grid
+// gridSizeX: Number of grid cells in the x direction
+// gridSizeY: Number of grid cells in the y direction
+// gridIndX: The x index of the cell in the grid to put the rectangle in
+// gridIndY: The y index of the cell in the grid to put the rectangle in
+// scale: A factor to scale the sidelengths of the rectangle by
 Rect getRect(int gridSizeX, int gridSizeY, int gridIndX, int gridIndY, float scale) {
     Rect retRect;
     retRect.w = 2.0f / gridSizeX;
@@ -26,6 +33,13 @@ Rect getRect(int gridSizeX, int gridSizeY, int gridIndX, int gridIndY, float sca
     return retRect;
 }
 
+// Creates a Rect using screen coordinates based on a location within a grid, and a rectangle that contains the grid
+// gridSizeX: Number of grid cells in the x direction
+// gridSizeY: Number of grid cells in the y direction
+// gridIndX: The x index of the cell in the grid to put the rectangle in
+// gridIndY: The y index of the cell in the grid to put the rectangle in
+// scale: A factor to scale the sidelengths of the rectangle by
+// gridRect: A Rect that the grid is inside of
 Rect getRect(int gridSizeX, int gridSizeY, int gridIndX, int gridIndY, float scale, Rect gridRect) {
     Rect retRect;
     retRect.w = gridRect.w / gridSizeX;
@@ -39,6 +53,7 @@ Rect getRect(int gridSizeX, int gridSizeY, int gridIndX, int gridIndY, float sca
     return retRect;
 }
 
+// An object with a circle for a hitbox
 class CircleObject : private LineAndCircleBoundedCollidable {
     float radius;
 
@@ -51,37 +66,16 @@ public:
     using LineAndCircleBoundedCollidable::changeTrajectory;
     using LineAndCircleBoundedCollidable::changeVelocity;
 
-    CircleObject(float2 location, float2 velocity, float initRadius, float mass) : LineAndCircleBoundedCollidable{ location, velocity }, radius{ initRadius } {
-        /*// For octagon with diagonal = 2 * radius:
-        // Diameter = side length * sqrt(4 + 2sqrt(2))
-        // Area = 2 * side length^2 * (1 + sqrt(2))
-        // Side length = diameter / sqrt(4 + 2sqrt(2))
-        float sideLength = 2 * radius / sqrt(4 + 2 * sqrt(2));
-        // SmallRadius^2 = radius^2 - (side length/2)^2
-        float smallRadius = sqrt(radius * radius - sideLength * sideLength / 4);
-        addLine({ -sideLength / 2,smallRadius }, { sideLength / 2,smallRadius });
-        addLine({ sideLength / 2,smallRadius }, { smallRadius,sideLength / 2 });
-        addLine({ smallRadius,sideLength / 2 }, { smallRadius,-sideLength / 2 });
-        addLine({ smallRadius,-sideLength / 2 }, { sideLength / 2,-smallRadius });
-        addLine({ sideLength / 2,-smallRadius }, { -sideLength / 2,-smallRadius });
-        addLine({ -sideLength / 2,-smallRadius }, { -smallRadius,-sideLength / 2 });
-        addLine({ -smallRadius,-sideLength / 2 }, { -smallRadius,sideLength / 2 });
-        addLine({ -smallRadius,sideLength / 2 }, { -sideLength / 2,smallRadius });*/
-
-        /*// For Hexagon
-        addLine({-sideLength / 2,smallRadius}, {sideLength / 2,smallRadius});
-        addLine({ sideLength / 2,smallRadius }, { radius,0.0f });
-        addLine({ radius,0.0f }, { sideLength / 2,-smallRadius });
-        addLine({ sideLength / 2,-smallRadius }, { -sideLength / 2,-smallRadius });
-        addLine({ -sideLength / 2,-smallRadius }, { -radius,0.0f });
-        addLine({ -radius,0.0f }, { -sideLength / 2,smallRadius });*/
-
+    CircleObject(float2 location, float2 velocity, float initRadius, float mass)
+        : LineAndCircleBoundedCollidable{ location, velocity }, radius{ initRadius } {
+        
         addCircle({ 0.0f,0.0f }, radius);
     }
 
     CircleObject(CircleObject&& other) noexcept : LineAndCircleBoundedCollidable{ std::move(other) }, radius{ other.radius } {}
 };
 
+// An object with a rectangle for a hitbox
 class RectangularObject : private LineAndCircleBoundedCollidable {
     RectangularObject& operator=(RectangularObject&&) = delete;
     RectangularObject(const RectangularObject&) = delete;
@@ -103,6 +97,7 @@ public:
     RectangularObject(RectangularObject&& other) noexcept : LineAndCircleBoundedCollidable{ std::move(other) } {}
 };
 
+// The blocks which can be destroyed by the ball
 class Block : private RectangularObject {
     DisplaySystem::VisualComponent image;
     unsigned int health;
@@ -110,17 +105,20 @@ class Block : private RectangularObject {
     Block& operator=(Block&&) = delete;
     Block(const Block&) = delete;
     Block& operator=(const Block&) = delete;
+
     virtual const Matrix2x2 getInverseMassMatrix() {
         return { 0,0,0,0 };
     }
+
     virtual void onCollision() {
         if (health)
             --health;
-        // Could change image
+        // TODO: Could change image to represent different health
     }
 public:
     Block(Rect rect, unsigned initHealth)
         : image{ "images/Block.png",rect.x,rect.y,rect.w,rect.h }, health{ initHealth }, RectangularObject{ rect,{0.0f,0.0f} } {}
+
     // Returns true if should be destroyed
     bool tick() {
         if (!health) {
@@ -132,12 +130,14 @@ public:
     Block(Block&& other) noexcept : RectangularObject{ std::move(other) }, image{ std::move(other.image) }, health{ other.health } {}
 };
 
+// A wall which does not move and which nothing can pass through
 class Wall : private RectangularObject {
     DisplaySystem::VisualComponent image;
 
     Wall& operator=(Wall&&) = delete;
     Wall(const Wall&) = delete;
     Wall& operator=(const Wall&) = delete;
+
     virtual const Matrix2x2 getInverseMassMatrix() {
         return { 0,0,0,0 };
     }
@@ -147,6 +147,7 @@ public:
     Wall(Wall&& other) noexcept : image{ std::move(other.image) }, RectangularObject{ std::move(other) }{}
 };
 
+// The ball that the player hits
 class Ball : private CircleObject {
     DisplaySystem::VisualComponent image;
     float radius;
@@ -155,20 +156,25 @@ class Ball : private CircleObject {
     Ball& operator=(Ball&&) = delete;
     Ball(const Ball&) = delete;
     Ball& operator=(const Ball&) = delete;
+
+    // Does not contribute to friction during collisions
     virtual float getCorFactorPerp() {
         return 1.0f;
     }
+
     virtual const Matrix2x2 getInverseMassMatrix() {
-        return { 1 / mass,0,0,1 / mass };
+        return { 1 / mass, 0, 0, 1 / mass };
     }
 public:
     Ball(float2 location, float2 velocity, float initRadius, float initMass)
         : image{ "images/Ball.png",location.x - initRadius,location.y + initRadius,2 * initRadius,2 * initRadius },
         CircleObject{ location,velocity,initRadius,initMass }, radius{ initRadius }, mass{ initMass } {}
+
     bool isOffScreen() {
         float2 loc = getLocation();
         return max(abs(loc.x), abs(loc.y)) > 1.0f + radius;
     }
+
     bool tick() {
         float2 loc = getLocation();
         image.changeLocation(loc.x - radius, loc.y + radius);
@@ -178,6 +184,7 @@ public:
     Ball(Ball&& other) noexcept : image{ std::move(other.image) }, CircleObject{ std::move(other) }, radius{ other.radius }, mass{ other.mass } {}
 };
 
+// The bat that the player moves
 class Bat : private LineAndCircleBoundedCollidable {
     DisplaySystem::VisualComponent leftBat;
     DisplaySystem::VisualComponent centreBat;
@@ -196,29 +203,40 @@ class Bat : private LineAndCircleBoundedCollidable {
     virtual float getCorFactorPerp() {
         return 1.0f;
     }
+
+    // Tangential friction allows for the ball to be dragged by the bat
     virtual float getCorFactorTang() {
-        return 0.5f; // make init redundant by doing collision checks before while loop. replace collidable with lineAndCircleBoundedColliadable
+        return 0.5f;
     }
+
+    // Will not be moved vertically in collisions, but can be accelerated horizontally to avoid
+    // passing through walls or freezing the game when sqeezing a ball against a wall
     virtual const Matrix2x2 getInverseMassMatrix() {
-        return { 1 / mass,0,0,0 };
+        return { 1 / mass, 0, 0, 0 };
     }
+
+    // Will not recoil on collisions, but instead stay still
     virtual void onCollision() {
         if (getVelocity() != float2{ 0.0f, 0.0f })
-            changeVelocity({ 0.0f,0.0f });
+            changeVelocity({ 0.0f, 0.0f });
     }
 public:
-    Bat(Rect rect) : leftBat{ "images/LeftBat.png",rect.x,rect.y,rect.h / 2.0f,rect.h },
-        centreBat{ "images/BatCentre.png",rect.x + rect.h / 2.0f,rect.y,rect.w - rect.h,rect.h },
-        rightBat{ "images/RightBat.png",rect.x + rect.w - rect.h / 2.0f,rect.y,rect.h / 2.0f,rect.h },
+    Bat(Rect rect) : leftBat{ "images/LeftBat.png", rect.x, rect.y, rect.h / 2.0f, rect.h },
+        centreBat{ "images/BatCentre.png", rect.x + rect.h / 2.0f, rect.y, rect.w - rect.h, rect.h },
+        rightBat{ "images/RightBat.png", rect.x + rect.w - rect.h / 2.0f, rect.y, rect.h / 2.0f, rect.h },
         width{ rect.w }, height{ rect.h },
-        LineAndCircleBoundedCollidable{ {rect.x,rect.y},{0.0f,0.0f} },
-        movingLeft{ false }, movingRight{ false } {
-        addCircle({ rect.h / 2,-rect.h / 2 }, rect.h / 2);
-        addCircle({ rect.w - rect.h / 2,-rect.h / 2 }, rect.h / 2);
+        LineAndCircleBoundedCollidable{ {rect.x, rect.y}, {0.0f, 0.0f} },
+        movingLeft{ false }, movingRight{ false }
+    {
+        // Sets the hitbox of the bat
+        addCircle({ rect.h / 2, -rect.h / 2 }, rect.h / 2);
+        addCircle({ rect.w - rect.h / 2, -rect.h / 2 }, rect.h / 2);
         addLine({ rect.h / 2,0.0f }, { rect.w - rect.h / 2,0.0f });
         addLine({ rect.w - rect.h / 2, -rect.h }, { rect.h / 2, -rect.h });
     }
+
     void tick() {
+        // Sets the velocity of the bat
         if (movingLeft == movingRight) {
             if (getVelocity() != float2{ 0.0f, 0.0f })
                 changeVelocity({ 0.0f,0.0f });
@@ -233,12 +251,14 @@ public:
                     changeVelocity({ 0.03f,0.0f });
             }
         }
+        movingLeft = false;
+        movingRight = false;
+
+        // Updates the location of the images
         float2 loc = getLocation();
         leftBat.changeLocation(loc.x, loc.y);
         centreBat.changeLocation(loc.x + height / 2.0f, loc.y);
         rightBat.changeLocation(loc.x + width - height / 2.0f, loc.y);
-        movingLeft = false;
-        movingRight = false;
     }
     void moveLeft() {
         movingLeft = true;
@@ -248,6 +268,7 @@ public:
     }
 };
 
+// Manages the logic of the game
 class BreakoutGame {
     std::vector<Wall> walls;
     std::list<Block> blocks;
@@ -259,22 +280,26 @@ class BreakoutGame {
     bool rightUp;
 public:
     BreakoutGame()
-        : bat{ Rect{ -0.1f,-0.84f,0.2f,0.05f } } {
-        // Set images for display, destroy before cleanup
+        : bat{ Rect{ -0.1f, -0.84f, 0.2f, 0.05f } } {
+        // Sets up blocks
         for (int i = 0; i < 10; ++i) {
             for (int j = 0; j < 8; ++j) {
                 blocks.emplace_back(getRect(10, 20, i, 2 + j, 0.9f, { -0.9f,0.9f,1.8f,1.8f }), 1);
             }
         }
+        // Adds one ball
         balls.emplace_back(float2{ 0.0f,-0.5f }, float2{ -0.01f,-0.01f }, 0.025f, 1.0f);
-        leftDown = false;
-        rightDown = false;
-        leftUp = false;
-        rightUp = false;
+
+        // Adds bounding walls
         Rect temp = getRect(20, 1, 0, 0, 1.0f);
         walls.emplace_back(getRect(20, 1, 0, 0, 1.0f));
         walls.emplace_back(getRect(20, 1, 19, 0, 1.0f));
         walls.emplace_back(getRect(1, 20, 0, 0, 1.0f, { temp.x + temp.w,1.0f ,2.0f * 18.0f / 20.0f,2.0f }));
+
+        leftDown = false;
+        rightDown = false;
+        leftUp = false;
+        rightUp = false;
     }
     void tick() {
         if (leftDown)
@@ -282,7 +307,7 @@ public:
         if (rightDown)
             bat.moveRight();
 
-        // Call tick() functions
+        // Call tick() functions; remove blocks which have no health and balls which are offscreen
         for (auto it = blocks.begin(); it != blocks.end();) {
             if (it->tick()) {
                 it = blocks.erase(it);
@@ -301,9 +326,8 @@ public:
         }
         bat.tick();
 
-        // If no blocks or no balls
+        // If no blocks or no balls, reset game
         if (blocks.empty() || balls.empty()) {
-            // Reset
             blocks.clear();
             balls.clear();
 

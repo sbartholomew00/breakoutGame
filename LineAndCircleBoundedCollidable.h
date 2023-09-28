@@ -65,8 +65,11 @@ class LineAndCircleBoundedCollidable
 	void checkForNextCollision();
 	void updateListPosition(float newTimeOfCollision);
 	virtual void onCollision() {}
+	// Friction factor for slowing down objects perpedicular to the surface of collision
 	virtual float getCorFactorPerp() { return 1.0f; }
+	// Friction factor for slowing down objects tangentially to the surface of collision
 	virtual float getCorFactorTang() { return 1.0f; }
+	// Determines how resistant to acceleration the object is in different directions
 	virtual const Matrix2x2 getInverseMassMatrix() = 0;
 public:
 	static void doTickOfCollisions();
@@ -76,7 +79,8 @@ public:
 	LineAndCircleBoundedCollidable& operator=(LineAndCircleBoundedCollidable&&) noexcept;
 	void changeTrajectory(const float2& newLocation, const float2& newVelocity);
 	void changeVelocity(const float2& newVelocity);
-	void addLine(const float2& p1, const float2& p2); // Lines should be added with p2 clockwise from p1 for collision with stuff outside
+	// Lines should be added with p2 clockwise from p1 for collision with objects outside
+	void addLine(const float2& p1, const float2& p2);
 	void addCircle(const float2& centre, float radius);
 	float2 getLocation() { return location; }
 	float2 getVelocity() { return velocity; }
